@@ -345,14 +345,16 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete, onDrop
           </div>
         )}
       </div>
+      {/* Tailwind v4 only applies group-hover on devices that can hover, so a
+          touchscreen never reveals these. pointer-coarse keeps them visible there. */}
       <div className="flex items-center gap-1">
         {isCooked ? (
-          <Button variant="ghost" size="icon" onClick={onUnmarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" title="Undo cooked"><Undo2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onUnmarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 pointer-coarse:opacity-60 transition-opacity" title="Undo cooked"><Undo2 className="h-4 w-4" /></Button>
         ) : (
-          <Button variant="ghost" size="icon" onClick={onMarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" title="Mark as cooked"><CheckCircle2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onMarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 pointer-coarse:opacity-60 transition-opacity" title="Mark as cooked"><CheckCircle2 className="h-4 w-4" /></Button>
         )}
-        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" aria-label="Edit meal"><Edit2 className="h-3 w-3" /></Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity" aria-label="Delete meal"><Trash2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 max-md:opacity-60 pointer-coarse:opacity-60 transition-opacity" aria-label="Edit meal"><Edit2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 max-md:opacity-60 pointer-coarse:opacity-60 transition-opacity" aria-label="Delete meal"><Trash2 className="h-3 w-3" /></Button>
       </div>
     </div>
   );

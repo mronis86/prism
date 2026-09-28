@@ -261,7 +261,7 @@ function MealItem({
       {/* Cooked toggle — stops propagation so the row click doesn't fire too. */}
       {isCooked && onUnmarkCooked ? (
         <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onUnmarkCooked(meal.id); }}
-          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Undo" aria-label="Undo mark as cooked">
+          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 transition-opacity" title="Undo" aria-label="Undo mark as cooked">
           <Undo2 className="h-4 w-4" />
         </Button>
       ) : !isCooked && onMarkCooked ? (
