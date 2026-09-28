@@ -473,7 +473,7 @@ function MessageCard({
                 variant="ghost"
                 size="icon"
                 onClick={startEdit}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 transition-opacity h-6 w-6"
                 title="Edit message"
               >
                 <Pencil className="h-3 w-3" />
@@ -482,7 +482,7 @@ function MessageCard({
                 variant="ghost"
                 size="icon"
                 onClick={onDelete}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 text-destructive"
+                className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 transition-opacity h-6 w-6 text-destructive"
                 title="Delete message"
               >
                 <Trash2 className="h-3 w-3" />
@@ -557,7 +557,7 @@ function MessageCard({
               variant="ghost"
               size="icon"
               onClick={startEdit}
-              className="opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity h-8 w-8"
+              className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 max-md:opacity-60 transition-opacity h-8 w-8"
               title="Edit message"
             >
               <Pencil className="h-4 w-4" />
@@ -566,7 +566,7 @@ function MessageCard({
               variant="ghost"
               size="icon"
               onClick={onDelete}
-              className="opacity-0 group-hover:opacity-100 max-md:opacity-60 transition-opacity h-8 w-8 text-destructive"
+              className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 max-md:opacity-60 transition-opacity h-8 w-8 text-destructive"
               title="Delete message"
             >
               <Trash2 className="h-4 w-4" />

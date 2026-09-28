@@ -273,7 +273,7 @@ function GiftIdeaRow({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 opacity-0 group-hover:opacity-100"
+          className="h-7 w-7 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60"
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           title="Edit"
         >
@@ -282,7 +282,7 @@ function GiftIdeaRow({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10"
+          className="h-7 w-7 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           title="Delete"
         >

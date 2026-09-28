@@ -231,7 +231,7 @@ function MessageItem({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-60 p-1 rounded hover:bg-destructive/20 transition-opacity"
               title="Delete message"
               aria-label="Delete message"
             >
