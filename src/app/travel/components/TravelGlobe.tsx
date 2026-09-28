@@ -9,8 +9,10 @@ import { createPinElement, getZoomTier } from './globeMarkers';
 import { buildTooltipHTML } from './globeTooltip';
 import { addTripLinesLayer, buildTripFeatures, buildTripContextMap } from './globeLayers';
 import { useGlobeRotation } from './useGlobeRotation';
+import { fitGlobeZoom } from './globeFit';
 
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
+const DEFAULT_ZOOM = 2.8;
 
 // maplibre-gl v6 is ESM-only and finds its worker via
 // `new URL('./maplibre-gl-worker.mjs', import.meta.url)`. Webpack does not
@@ -66,7 +68,31 @@ export function TravelGlobe({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: STYLE_LIGHT,
-      zoom: 2.8, center: [0, 20], pitchWithRotate: false, attributionControl: false,
+      zoom: DEFAULT_ZOOM, center: [0, 20], pitchWithRotate: false, attributionControl: false,
+    });
+
+    // Keep the whole globe inside the container. At the fixed zoom the globe's
+    // size follows the container height, so a tall, narrow portrait container
+    // cut off both sides (and a short landscape one the top and bottom). The
+    // zoom only ever drops below DEFAULT_ZOOM, never above it. The fit is redone
+    // when the container resizes (rotation, window resize) unless the zoom has
+    // moved since the last fit, which means someone zoomed or a pin was flown to.
+    let fittedZoom: number | null = null;
+    const fitToContainer = () => {
+      const el = map.getContainer();
+      const zoom = fitGlobeZoom({
+        width: el.clientWidth,
+        height: el.clientHeight,
+        centerLat: map.getCenter().lat,
+        fovDeg: map.getVerticalFieldOfView(),
+        maxZoom: DEFAULT_ZOOM,
+      });
+      fittedZoom = zoom;
+      if (Math.abs(map.getZoom() - zoom) > 1e-6) map.setZoom(zoom);
+    };
+    fitToContainer();
+    map.on('resize', () => {
+      if (fittedZoom !== null && Math.abs(map.getZoom() - fittedZoom) < 1e-6) fitToContainer();
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
