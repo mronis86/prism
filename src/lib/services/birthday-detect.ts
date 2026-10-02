@@ -45,7 +45,8 @@
 
 import { db } from '@/lib/db/client';
 import { birthdays, calendarSources, dismissedBirthdays, events } from '@/lib/db/schema';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { visibleEventsCondition } from '@/lib/services/hiddenEvents';
 import { upsertBirthday } from './birthday-merge';
 import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { normalizePersonName } from '@/lib/utils/normalizePersonName';
@@ -208,7 +209,7 @@ export async function detectBirthdaysFromEvents(): Promise<DetectResult> {
     })
     .from(events)
     .innerJoin(calendarSources, eq(events.calendarSourceId, calendarSources.id))
-    .where(and(eq(events.allDay, true), eq(calendarSources.enabled, true), isNull(events.hiddenAt)));
+    .where(and(eq(events.allDay, true), eq(calendarSources.enabled, true), visibleEventsCondition()));
 
   const tombstones = await db.select().from(dismissedBirthdays);
   const isDismissed = (name: string, month: number, day: number, type: string) =>

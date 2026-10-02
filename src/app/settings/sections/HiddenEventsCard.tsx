@@ -15,14 +15,24 @@ type HiddenEvent = {
   calendarName: string | null;
 };
 
+type HiddenSeries = {
+  id: string;
+  title: string;
+  calendarName: string | null;
+};
+
+// Both lists share one card, so a series id carries a prefix to route Unhide.
+const SERIES_PREFIX = 'series:';
+
 /**
- * Events hidden in Prism (#592). A hidden event no longer appears anywhere it
- * could be clicked, so this list is the only way to show one again. Renders
- * nothing while the list is empty.
+ * Events and recurring series hidden in Prism (#592). A hidden event no longer
+ * appears anywhere it could be clicked, so this list is the only way to show
+ * one again. Renders nothing while the list is empty.
  */
 export function HiddenEventsCard() {
   const { displayTimezone } = useTimeFormat();
   const [hidden, setHidden] = useState<HiddenEvent[]>([]);
+  const [hiddenSeries, setHiddenSeries] = useState<HiddenSeries[]>([]);
   const [unhidingId, setUnhidingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,7 +42,9 @@ export function HiddenEventsCard() {
         const res = await fetch('/api/events/hidden');
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setHidden(data.hidden || []);
+        if (cancelled) return;
+        setHidden(data.hidden || []);
+        setHiddenSeries(data.hiddenSeries || []);
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
@@ -40,10 +52,15 @@ export function HiddenEventsCard() {
 
   const handleUnhide = useCallback(async (id: string) => {
     setUnhidingId(id);
+    const seriesId = id.startsWith(SERIES_PREFIX) ? id.slice(SERIES_PREFIX.length) : null;
     try {
-      const res = await fetch(`/api/events/${id}/hidden`, { method: 'DELETE' });
+      const res = await fetch(
+        seriesId ? `/api/events/hidden-series/${seriesId}` : `/api/events/${id}/hidden`,
+        { method: 'DELETE' },
+      );
       if (res.ok) {
-        setHidden((prev) => prev.filter((e) => e.id !== id));
+        if (seriesId) setHiddenSeries((prev) => prev.filter((e) => e.id !== seriesId));
+        else setHidden((prev) => prev.filter((e) => e.id !== id));
       } else {
         toast({ title: 'Failed to unhide event', variant: 'destructive' });
       }
@@ -54,15 +71,21 @@ export function HiddenEventsCard() {
     }
   }, []);
 
-  const items: RemovedItem[] = hidden.map((e) => {
-    const date = format(eventStartDisplayDate(new Date(e.startTime), e.allDay, displayTimezone), 'EEE, MMM d, yyyy');
-    return { id: e.id, name: [e.title, date, e.calendarName].filter(Boolean).join(' · ') };
-  });
+  const items: RemovedItem[] = [
+    ...hiddenSeries.map((s) => ({
+      id: SERIES_PREFIX + s.id,
+      name: [`Every "${s.title}"`, s.calendarName].filter(Boolean).join(' · '),
+    })),
+    ...hidden.map((e) => {
+      const date = format(eventStartDisplayDate(new Date(e.startTime), e.allDay, displayTimezone), 'EEE, MMM d, yyyy');
+      return { id: e.id, name: [e.title, date, e.calendarName].filter(Boolean).join(' · ') };
+    }),
+  ];
 
   return (
     <RemovedItemsManager
       title="Hidden events"
-      description="Events hidden in Prism. They are still in their source calendar; unhide one to show it again."
+      description="Events and series hidden in Prism. They are still in their source calendar; unhide one to show it again."
       items={items}
       onRestore={handleUnhide}
       restoringId={unhidingId}

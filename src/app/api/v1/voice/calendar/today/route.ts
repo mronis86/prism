@@ -3,7 +3,8 @@ import { voiceOk, voiceError } from '@/lib/api/voiceResponse';
 import { phraseEventList } from '@/lib/api/voicePhrases';
 import { db } from '@/lib/db/client';
 import { events } from '@/lib/db/schema';
-import { and, eq, gt, isNull, lt, lte, or, asc, desc } from 'drizzle-orm';
+import { and, eq, gt, lt, lte, or, asc, desc } from 'drizzle-orm';
+import { visibleEventsCondition } from '@/lib/services/hiddenEvents';
 import { logError } from '@/lib/utils/logError';
 import { getHouseholdTimezone } from '@/lib/householdTimezone';
 import { dateOnlyToFloatingUtc, dayWindowUtc, todayKey } from '@/lib/utils/zonedDate';
@@ -38,7 +39,7 @@ export async function GET() {
         })
         .from(events)
         .where(and(
-          isNull(events.hiddenAt),
+          visibleEventsCondition(),
           or(
             and(eq(events.allDay, false), lt(events.startTime, dayEnd), gt(events.endTime, dayStart)),
             and(eq(events.allDay, true), lte(events.startTime, floatingToday), gt(events.endTime, floatingToday)),

@@ -807,3 +807,55 @@ describe('sync leaves hiddenAt alone', () => {
     expect(eventWrites[0]).not.toHaveProperty('hiddenAt');
   });
 });
+
+// A hidden series matches occurrences on (calendarSourceId, seriesKey), so the
+// key has to be written on insert AND refreshed on update: rows synced before
+// the column existed pick it up on their next sync.
+describe('sync records the series key', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFindMany.mockResolvedValue([]);
+  });
+
+  it('Google: writes the converted seriesKey on insert and update', async () => {
+    mockFindFirst.mockResolvedValue(makeSource());
+    mockFetchCalendarEvents.mockResolvedValue([{ id: 'event-1_20261005', summary: 'Piano' }]);
+    mockConvertEvent.mockReturnValue({
+      externalEventId: 'event-1_20261005', title: 'Piano', startTime: new Date(), endTime: new Date(),
+      seriesKey: 'event-1',
+    });
+
+    await syncGoogleCalendarSource('source-1');
+
+    expect(mockInsertValues.mock.calls[0][0]).toMatchObject({ seriesKey: 'event-1' });
+    expect(mockOnConflictDoUpdate.mock.calls[0][0].set).toMatchObject({ seriesKey: 'event-1' });
+  });
+
+  it('iCal: every occurrence of a recurring VEVENT carries its UID', async () => {
+    const fakeRrule = {
+      between: () => [new Date('2026-05-10T10:00:00Z'), new Date('2026-05-17T10:00:00Z')],
+      toString: () => 'FREQ=WEEKLY;COUNT=10',
+    };
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({ 'event-uid-1': makeVEvent({ rrule: fakeRrule }) });
+
+    await syncIcalCalendarSource('ical-source-1');
+
+    expect(mockInsertValues).toHaveBeenCalledTimes(2);
+    for (const [row] of mockInsertValues.mock.calls) {
+      expect(row).toMatchObject({ seriesKey: 'event-uid-1' });
+    }
+    for (const [conflict] of mockOnConflictDoUpdate.mock.calls) {
+      expect(conflict.set).toMatchObject({ seriesKey: 'event-uid-1' });
+    }
+  });
+
+  it('iCal: a one-off event has no series', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({ 'event-uid-1': makeVEvent() });
+
+    await syncIcalCalendarSource('ical-source-1');
+
+    expect(mockInsertValues.mock.calls[0][0]).toMatchObject({ seriesKey: null });
+  });
+});

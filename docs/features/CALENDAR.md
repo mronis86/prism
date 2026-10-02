@@ -246,7 +246,9 @@ Toggle visibility with the **clock button** in calendar views. It dims when acti
 
 A parent can hide an event without deleting it: click the event and tick **Hide in Prism**. It disappears from every view, widget and voice answer at once, and a toast offers **Undo**. The event stays in its source calendar, and a later sync does not bring it back.
 
-Hidden events are listed under **Hidden events** in the **Manage** overlay on the Calendar page (Settings → Calendars), with **Unhide** to show one again.
+On an occurrence of a recurring event from Google or an iCal feed, ticking the box asks **This event** or **Every event in the series**. Hiding the series also hides occurrences that sync in later. Events from a CalDAV calendar can only be hidden one at a time for now.
+
+Hidden events and series are listed under **Hidden events** in the **Manage** overlay on the Calendar page (Settings → Calendars), with **Unhide** to show one again.
 
 Hide is different from **Delete**, which removes the event from Prism and, for Google and single CalDAV events, from the source calendar too.
 

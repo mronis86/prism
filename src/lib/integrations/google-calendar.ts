@@ -501,6 +501,7 @@ export function convertGoogleEventToInternal(
   allDay: boolean;
   recurring: boolean;
   recurrenceRule: string | null;
+  seriesKey: string | null;
   calendarSourceId: string;
 } {
   const isAllDay = !googleEvent.start.dateTime;
@@ -529,6 +530,8 @@ export function convertGoogleEventToInternal(
     allDay: isAllDay,
     recurring: Boolean(googleEvent.recurrence || googleEvent.recurringEventId),
     recurrenceRule: googleEvent.recurrence?.[0] || null,
+    // Sync asks for singleEvents, so each occurrence names its series here.
+    seriesKey: googleEvent.recurringEventId || null,
     calendarSourceId,
   };
 }

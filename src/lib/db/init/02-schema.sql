@@ -303,6 +303,7 @@ CREATE TABLE IF NOT EXISTS public.events (
     last_synced timestamp without time zone,
     pending_deletion timestamp without time zone,
     hidden_at timestamp without time zone,
+    series_key character varying(255),
     caldav_href character varying(1024),
     caldav_etag character varying(255),
     created_at timestamp without time zone DEFAULT now() NOT NULL,
@@ -2662,3 +2663,14 @@ CREATE TABLE IF NOT EXISTS public.excluded_photos (
   created_at timestamp DEFAULT now() NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS excluded_photos_source_external_unique ON public.excluded_photos (source_id, external_id);
+
+-- Recurring series hidden in Prism (#592, migration 0031).
+CREATE INDEX IF NOT EXISTS events_source_series_idx ON public.events (calendar_source_id, series_key);
+CREATE TABLE IF NOT EXISTS public.hidden_event_series (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  calendar_source_id uuid NOT NULL REFERENCES public.calendar_sources(id) ON DELETE CASCADE,
+  series_key varchar(255) NOT NULL,
+  title varchar(255) NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS hidden_event_series_source_key_unique ON public.hidden_event_series (calendar_source_id, series_key);

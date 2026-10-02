@@ -30,6 +30,7 @@ import { invalidateEntity } from '@/lib/cache/cacheKeys';
 import { createCalendarEvent, refreshAccessToken, toGoogleAllDayRange } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { formatEventRow } from '@/lib/utils/formatters';
+import { visibleEventsCondition } from '@/lib/services/hiddenEvents';
 import { logActivity } from '@/lib/services/auditLog';
 import { logError } from '@/lib/utils/logError';
 import { getHouseholdTimezone } from '@/lib/householdTimezone';
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
     );
 
     // A hidden event (#592) stays in the database so a sync cannot re-add it.
-    const conditions = [dateRangeCondition, isNull(events.hiddenAt)];
+    const conditions = [dateRangeCondition, visibleEventsCondition()];
 
     if (calendarId) {
       conditions.push(eq(events.calendarSourceId, calendarId));
@@ -139,6 +140,7 @@ export async function GET(request: NextRequest) {
           allDay: events.allDay,
           recurring: events.recurring,
           recurrenceRule: events.recurrenceRule,
+          seriesKey: events.seriesKey,
           color: events.color,
           reminderMinutes: events.reminderMinutes,
           createdAt: events.createdAt,

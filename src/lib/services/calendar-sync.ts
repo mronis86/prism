@@ -308,6 +308,7 @@ export async function syncGoogleCalendarSource(
           allDay: internalEvent.allDay,
           recurring: internalEvent.recurring,
           recurrenceRule: internalEvent.recurrenceRule,
+          seriesKey: internalEvent.seriesKey,
           lastSynced: new Date(),
         })
         .onConflictDoUpdate({
@@ -321,6 +322,7 @@ export async function syncGoogleCalendarSource(
             allDay: internalEvent.allDay,
             recurring: internalEvent.recurring,
             recurrenceRule: internalEvent.recurrenceRule,
+            seriesKey: internalEvent.seriesKey,
             lastSynced: new Date(),
             updatedAt: new Date(),
           },
@@ -708,6 +710,8 @@ export async function syncIcalCalendarSource(
       // signal. Preserves Google's per-row shape (which uses singleEvents:
       // true and never carries an RRULE on individual instances either).
       const recurrenceRule = null;
+      // Every expanded occurrence belongs to the master's series (#592).
+      const seriesKey = isRecurring ? uid : null;
       const title = readIcalString(vevent.summary) || '(no title)';
       const description = readIcalString(vevent.description);
       const location = readIcalString(vevent.location);
@@ -740,6 +744,7 @@ export async function syncIcalCalendarSource(
             allDay,
             recurring: isRecurring,
             recurrenceRule,
+            seriesKey,
             lastSynced: new Date(),
           })
           .onConflictDoUpdate({
@@ -753,6 +758,7 @@ export async function syncIcalCalendarSource(
               allDay,
               recurring: isRecurring,
               recurrenceRule,
+              seriesKey,
               lastSynced: new Date(),
               updatedAt: new Date(),
             },

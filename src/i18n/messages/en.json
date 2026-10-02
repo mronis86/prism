@@ -123,7 +123,10 @@
       "hideInPrism": "Hide in Prism",
       "hideInPrismHint": "It stays in its calendar. Unhide it in Settings > Calendars.",
       "hiddenToast": "Hid \"{title}\"",
-      "hiddenToastBody": "Unhide it in Settings > Calendars."
+      "hiddenToastBody": "Unhide it in Settings > Calendars.",
+      "hideThisEvent": "This event",
+      "hideWholeSeries": "Every event in the series",
+      "hiddenSeriesToast": "Hid every \"{title}\""
     },
     "eventForm": {
       "titleNew": "New Event",

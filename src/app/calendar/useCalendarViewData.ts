@@ -158,6 +158,8 @@ export function useCalendarViewData() {
       recurring: event.recurring,
       recurrenceRule: event.recurrenceRule,
       reminderMinutes: event.reminderMinutes,
+      // The event detail offers "every event in the series" only on this.
+      inSeries: event.inSeries,
       calendarName: event.calendarName,
       calendarId: event.calendarId,
     }));

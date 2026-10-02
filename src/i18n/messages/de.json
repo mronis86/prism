@@ -123,7 +123,10 @@
       "hideInPrism": "In Prism ausblenden",
       "hideInPrismHint": "Der Termin bleibt in seinem Kalender. Unter Einstellungen > Kalender wieder einblenden.",
       "hiddenToast": "„{title}“ ausgeblendet",
-      "hiddenToastBody": "Unter Einstellungen > Kalender wieder einblenden."
+      "hiddenToastBody": "Unter Einstellungen > Kalender wieder einblenden.",
+      "hideThisEvent": "Nur diesen Termin",
+      "hideWholeSeries": "Alle Termine der Serie",
+      "hiddenSeriesToast": "Alle „{title}“ ausgeblendet"
     },
     "eventForm": {
       "titleNew": "Neuer Termin",

@@ -162,6 +162,7 @@ export function formatEventRow(row: {
   allDay: boolean;
   recurring: boolean;
   recurrenceRule: string | null;
+  seriesKey?: string | null;
   color: string | null;
   reminderMinutes: number | null;
   calendarSourceId: string | null;
@@ -192,6 +193,7 @@ export function formatEventRow(row: {
     recurrenceRule: row.recurrenceRule,
     color: eventColor,
     reminderMinutes: row.reminderMinutes,
+    inSeries: Boolean(row.seriesKey),
     calendarSource: row.calendarSourceId
       ? {
           id: row.calendarSourceId,

@@ -777,7 +777,7 @@ export function CalendarView() {
 
 
 function EventDetailModal({ event, onClose, onEdit, onDeleted, canHide, onHiddenChange }: {
-  event: { id: string; title: string; startTime: Date; endTime: Date; allDay: boolean; color: string; location?: string; description?: string; calendarName: string };
+  event: { id: string; title: string; startTime: Date; endTime: Date; allDay: boolean; color: string; location?: string; description?: string; calendarName: string; inSeries?: boolean };
   onClose: () => void;
   onEdit: () => void;
   onDeleted: () => void;
@@ -792,32 +792,38 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted, canHide, onHidden
   const d = useDateLabels();
   const { confirm, dialogProps } = useConfirmDialog();
   const [hiding, setHiding] = useState(false);
+  // On an occurrence of a series, ticking the box first asks which to hide.
+  const [choosingScope, setChoosingScope] = useState(false);
 
   // Hide in Prism (#592): applies at once, like the rest of the app, with an
   // Undo in the toast. The event stays in its source calendar.
-  const setHidden = (hidden: boolean) =>
-    fetch(`/api/events/${event.id}/hidden`, { method: hidden ? 'PUT' : 'DELETE' });
-
-  const handleHide = async () => {
+  const handleHide = async (scope: 'event' | 'series') => {
     setHiding(true);
     try {
-      const response = await setHidden(true);
+      const response = await fetch(
+        `/api/events/${event.id}/hidden${scope === 'series' ? '?scope=series' : ''}`,
+        { method: 'PUT' },
+      );
       if (!response.ok) {
         const { message } = await readResponseError(response, t('errors.hideFailed'));
         toast({ title: message, variant: 'destructive' });
         setHiding(false);
         return;
       }
+      const { seriesId } = (await response.json()) as { seriesId?: string | null };
+      const undoUrl = scope === 'series' && seriesId
+        ? `/api/events/hidden-series/${seriesId}`
+        : `/api/events/${event.id}/hidden`;
       onHiddenChange();
       toast({
-        title: t('event.hiddenToast', { title: event.title }),
+        title: t(scope === 'series' ? 'event.hiddenSeriesToast' : 'event.hiddenToast', { title: event.title }),
         description: t('event.hiddenToastBody'),
         action: (
           <ToastAction
             altText={tActions('undo')}
             onClick={async () => {
               try {
-                const undo = await setHidden(false);
+                const undo = await fetch(undoUrl, { method: 'DELETE' });
                 if (!undo.ok) throw new Error(String(undo.status));
                 onHiddenChange();
               } catch { toast({ title: t('errors.unhideFailed'), variant: 'destructive' }); }
@@ -882,15 +888,29 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted, canHide, onHidden
         {canHide && (
           <label className="flex items-start gap-3 mt-4 cursor-pointer">
             <Checkbox
-              checked={hiding}
+              checked={hiding || choosingScope}
               disabled={hiding}
-              onCheckedChange={(checked) => { if (checked === true) handleHide(); }}
+              onCheckedChange={(checked) => {
+                if (checked !== true) setChoosingScope(false);
+                else if (event.inSeries) setChoosingScope(true);
+                else handleHide('event');
+              }}
             />
             <span className="text-sm">
               <span className="block font-medium">{t('event.hideInPrism')}</span>
               <span className="block text-muted-foreground">{t('event.hideInPrismHint')}</span>
             </span>
           </label>
+        )}
+        {canHide && choosingScope && (
+          <div className="flex flex-wrap gap-2 mt-3 ml-9">
+            <Button size="sm" variant="outline" disabled={hiding} onClick={() => handleHide('event')}>
+              {t('event.hideThisEvent')}
+            </Button>
+            <Button size="sm" variant="outline" disabled={hiding} onClick={() => handleHide('series')}>
+              {t('event.hideWholeSeries')}
+            </Button>
+          </div>
         )}
         <div className="flex justify-between mt-6">
           <Button variant="destructive" onClick={handleDelete}>

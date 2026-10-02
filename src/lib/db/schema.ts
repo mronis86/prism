@@ -177,6 +177,13 @@ export const events = pgTable('events', {
   // the columns they overwrite, so a sync never unhides it. Null = shown.
   hiddenAt: timestamp('hidden_at'),
 
+  // The recurring series this row is an occurrence of, as the source names it:
+  // Google's recurringEventId, or the master VEVENT's UID for an iCal feed.
+  // Null for a one-off event and for Prism-created rows. A hidden series
+  // (hiddenEventSeries) matches on (calendarSourceId, seriesKey). CalDAV rows
+  // stay null until edited occurrences carry their master's UID (#593).
+  seriesKey: varchar('series_key', { length: 255 }),
+
   // CalDAV calendar-object href + ETag, captured at sync time. A CalDAV DELETE
   // targets the object by href (not UID), so we need it to propagate a local
   // delete upstream to the source server (single-event scope; recurring events
@@ -193,6 +200,27 @@ export const events = pgTable('events', {
   // Unique constraint to prevent duplicate synced events
   sourceExternalUnique: uniqueIndex('events_source_external_unique')
     .on(table.calendarSourceId, table.externalEventId),
+  sourceSeriesIdx: index('events_source_series_idx').on(table.calendarSourceId, table.seriesKey),
+}));
+
+/**
+ * Recurring series hidden in Prism (#592). Every occurrence whose
+ * (calendarSourceId, seriesKey) matches is left out of the read paths,
+ * including occurrences that sync in later. The title is a copy for the
+ * Settings list, which must name the series even when no occurrence is in the
+ * sync window. Cascade-deletes with the source.
+ */
+export const hiddenEventSeries = pgTable('hidden_event_series', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  calendarSourceId: uuid('calendar_source_id')
+    .notNull()
+    .references(() => calendarSources.id, { onDelete: 'cascade' }),
+  seriesKey: varchar('series_key', { length: 255 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  hiddenSeriesSourceKeyUnique: uniqueIndex('hidden_event_series_source_key_unique')
+    .on(table.calendarSourceId, table.seriesKey),
 }));
 
 /**

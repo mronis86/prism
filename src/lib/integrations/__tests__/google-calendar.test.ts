@@ -160,6 +160,19 @@ describe('convertGoogleEventToInternal', () => {
 
       expect(result.recurring).toBe(true);
       expect(result.recurrenceRule).toBeNull();
+      // The series a hidden-series row matches on (#592).
+      expect(result.seriesKey).toBe('evt-6');
+    });
+
+    it('gives a one-off event no series key', () => {
+      const result = convertGoogleEventToInternal({
+        id: 'evt-8',
+        summary: 'One-off',
+        start: { dateTime: '2026-03-08T10:00:00Z' },
+        end: { dateTime: '2026-03-08T11:00:00Z' },
+      }, SOURCE_ID);
+
+      expect(result.seriesKey).toBeNull();
     });
 
     it('marks non-recurring event correctly', () => {
