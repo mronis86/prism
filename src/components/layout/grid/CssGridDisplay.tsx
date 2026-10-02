@@ -6,6 +6,7 @@ import { getWidgetStyle, getWidgetContentStyle, getTextColorClass } from './grid
 import { useSquareCells } from './useSquareCells';
 import { useViewportSize } from '@/lib/hooks/useViewportSize';
 import { GRID_COLS } from '@/lib/constants/grid';
+import { resolveFitMode, containGeometry } from './fitMode';
 import type { CssGridDisplayProps } from './gridEditorTypes';
 
 /**
@@ -66,24 +67,12 @@ export function CssGridDisplay({
     return { fitCols: maxCol, fitRows: maxRow };
   }, [visibleWidgets]);
 
-  const fit = (!!targetRows || containMode) && !fillHeight;
-  // Decide stretch-vs-letterbox from the CONTENT'S OWN SHAPE, not a stored
-  // orientation label (which can drift from the actual widgets — e.g. a layout
-  // saved as "portrait" but laid out landscape). A wide design on a wide screen
-  // (or tall on tall) stretches to fill; a genuine orientation mismatch (wide
-  // design on a tall screen or vice-versa) would be a ~2× skew, so it letterboxes
-  // to preserve proportions. `designOrientation` is kept only as a fallback for
-  // an empty/degenerate layout.
-  const designWide = fitCols !== fitRows
-    ? fitCols > fitRows
-    : (designOrientation ? designOrientation === 'landscape' : true);
   const screenWide = viewportWidth >= viewportHeight;
-  const sameOrientation = designWide === screenWide;
-  // containMode always scales-to-fit (screensaver — sparse ambient layout that
-  // should fit any screen without clipping); otherwise stretch when orientation
-  // matches and letterbox only on a genuine mismatch.
-  const stretch = fit && sameOrientation && !containMode;
-  const contain = fit && (!sameOrientation || containMode);
+  const mode = resolveFitMode({
+    fitCols, fitRows, targetRows, designOrientation, screenWide, containMode, fillHeight,
+  });
+  const stretch = mode === 'stretch';
+  const contain = mode === 'contain';
 
   // Available box below the real chrome. Uses the measured grid top when we have
   // it (real header height) and the reactive viewport height so F11/fullscreen,
@@ -119,13 +108,21 @@ export function CssGridDisplay({
   const bottomSafety = chromeTop > 0 ? Math.round(margin * 1.5) : 0;
   const availH = Math.max(120, localH - chromeTop - bottomOffset - bottomSafety);
 
-  // Contain (letterbox) mode: largest square cell that fits the WHOLE content
-  // canvas within the available box on both axes.
-  const containCell = useMemo(() => {
-    if (!contain || width <= 0) return widthCellSize;
-    const innerW = width - 2 * containerPadding - (fitCols - 1) * margin;
-    const innerH = availH - 2 * containerPadding - (fitRows - 1) * margin;
-    return Math.max(8, Math.floor(Math.min(innerW / fitCols, innerH / fitRows)));
+  // Contain (letterbox) mode: largest square canvas that fits the WHOLE content
+  // within the available box on both axes.
+  // Before the first measurement there is no width yet, so use the width-based
+  // cell at full gap and padding.
+  const containGeo = useMemo(() => {
+    if (!contain || width <= 0) {
+      return {
+        cell: widthCellSize,
+        gap: margin,
+        padding: containerPadding,
+        gridWidth: fitCols * widthCellSize + (fitCols - 1) * margin + 2 * containerPadding,
+        gridHeight: fitRows * widthCellSize + (fitRows - 1) * margin + 2 * containerPadding,
+      };
+    }
+    return containGeometry({ width, height: availH, cols: fitCols, rows: fitRows, margin, padding: containerPadding });
   }, [contain, width, availH, widthCellSize, fitCols, fitRows, containerPadding, margin]);
 
   // Legacy (no targetRows): fill width, adapt row count to the viewport.
@@ -165,17 +162,17 @@ export function CssGridDisplay({
     };
   } else if (contain) {
     // Fixed-size, proportion-preserving canvas centered in the available box
-    // (letterbox/pillarbox) — used only on an orientation mismatch.
+    // (letterbox/pillarbox), used only on an orientation mismatch.
     containerHeight = availH;
     centerContain = true;
     gridStyle = {
       display: 'grid',
-      gridTemplateColumns: `repeat(${fitCols}, ${containCell}px)`,
-      gridAutoRows: `${containCell}px`,
-      gap: `${margin}px`,
-      padding: `${containerPadding}px`,
-      width: fitCols * containCell + (fitCols - 1) * margin + 2 * containerPadding,
-      height: fitRows * containCell + (fitRows - 1) * margin + 2 * containerPadding,
+      gridTemplateColumns: `repeat(${fitCols}, ${containGeo.cell}px)`,
+      gridAutoRows: `${containGeo.cell}px`,
+      gap: `${containGeo.gap}px`,
+      padding: `${containGeo.padding}px`,
+      width: containGeo.gridWidth,
+      height: containGeo.gridHeight,
     };
   } else {
     // Legacy: fill width, square cells, adaptive rows.
