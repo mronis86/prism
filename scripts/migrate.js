@@ -8,9 +8,11 @@
  * Brings the database schema up to date with the current codebase.
  *
  * How it works:
- *  - First run on any database: executes drizzle/0000_upgrade.sql, which is a
+ *  - Fresh managed Postgres (Railway/Render/etc.): applies drizzle/init
+ *    (copied from src/lib/db/init) so core tables exist, then continues below.
+ *  - First migration run: executes drizzle/0000_upgrade.sql, which is a
  *    fully idempotent catch-up script (all IF NOT EXISTS). Works correctly
- *    whether the database is brand new or was installed months ago.
+ *    whether the database is brand new (after init) or was installed months ago.
  *  - Subsequent runs: skips 0000_upgrade (already recorded), applies any new
  *    numbered migration files (0001_xxx.sql, 0002_xxx.sql, etc.) in order.
  *
@@ -33,6 +35,11 @@ if (!DATABASE_URL) {
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'drizzle');
 const UPGRADE_FILE = path.join(MIGRATIONS_DIR, '0000_upgrade.sql');
+// Fresh installs outside Docker Compose (e.g. Railway managed Postgres) never
+// get src/lib/db/init via docker-entrypoint-initdb.d. Apply that base schema
+// before 0000_upgrade, which ALTERs tables that must already exist.
+const INIT_DIR = path.join(__dirname, '..', 'drizzle', 'init');
+const INIT_FILES = ['01-init.sql', '02-schema.sql', '03-seed.sql'];
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -101,6 +108,30 @@ async function main() {
     let applied = new Set(
       (await sql`SELECT name FROM public.__prism_migrations`).map(r => r.name)
     );
+
+    // Empty managed DBs (Railway/Render/etc.) skip Docker init scripts.
+    // Detect that and load the base schema (+ demo seed) before upgrades.
+    const [{ exists: hasCoreSchema }] = await sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'calendar_sources'
+      ) AS exists
+    `;
+    if (!hasCoreSchema) {
+      console.log('[migrate] Fresh database detected — applying base init schema...');
+      for (const file of INIT_FILES) {
+        const filePath = path.join(INIT_DIR, file);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`Missing init file for fresh install: ${filePath}`);
+        }
+        console.log(`[migrate] Applying init/${file}...`);
+        const content = fs.readFileSync(filePath, 'utf8');
+        await sql.unsafe(content);
+        console.log(`[migrate] init/${file} done`);
+      }
+    }
+
     if (!applied.has('0000_upgrade')) {
       if (!fs.existsSync(UPGRADE_FILE)) {
         throw new Error('drizzle/0000_upgrade.sql not found');

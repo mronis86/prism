@@ -59,6 +59,8 @@ COPY --from=builder /app/third-party ./third-party
 
 # Migration runner and SQL files
 COPY --from=builder /app/drizzle ./drizzle
+# Base schema for fresh managed Postgres (Railway/etc.) — not only Docker Compose initdb.
+COPY --from=builder /app/src/lib/db/init ./drizzle/init
 COPY --from=builder /app/scripts/migrate.js ./scripts/migrate.js
 # reset-pin.js: offline PIN recovery, run via `docker compose exec`.
 COPY --from=builder /app/scripts/reset-pin.js ./scripts/reset-pin.js
