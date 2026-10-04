@@ -94,6 +94,37 @@ async function main() {
       await probe.end();
     }
 
+    // Empty / half-initialized managed DBs (Railway/Render/etc.) never get
+    // Docker's initdb scripts. Detect missing core tables and load the base
+    // schema BEFORE creating __prism_migrations — 02-schema.sql also creates
+    // that table, and creating it first causes constraint-name collisions.
+    const [{ exists: hasCoreSchema }] = await sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'calendar_sources'
+      ) AS exists
+    `;
+    if (!hasCoreSchema) {
+      console.log('[migrate] Fresh database detected — resetting public schema and applying base init...');
+      await sql.unsafe(`
+        DROP SCHEMA IF EXISTS public CASCADE;
+        CREATE SCHEMA public;
+        GRANT ALL ON SCHEMA public TO public;
+        GRANT ALL ON SCHEMA public TO CURRENT_USER;
+      `);
+      for (const file of INIT_FILES) {
+        const filePath = path.join(INIT_DIR, file);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`Missing init file for fresh install: ${filePath}`);
+        }
+        console.log(`[migrate] Applying init/${file}...`);
+        const content = fs.readFileSync(filePath, 'utf8');
+        await sql.unsafe(content);
+        console.log(`[migrate] init/${file} done`);
+      }
+    }
+
     await sql`
       CREATE TABLE IF NOT EXISTS public.__prism_migrations (
         id SERIAL PRIMARY KEY,
@@ -108,29 +139,6 @@ async function main() {
     let applied = new Set(
       (await sql`SELECT name FROM public.__prism_migrations`).map(r => r.name)
     );
-
-    // Empty managed DBs (Railway/Render/etc.) skip Docker init scripts.
-    // Detect that and load the base schema (+ demo seed) before upgrades.
-    const [{ exists: hasCoreSchema }] = await sql`
-      SELECT EXISTS (
-        SELECT 1
-        FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'calendar_sources'
-      ) AS exists
-    `;
-    if (!hasCoreSchema) {
-      console.log('[migrate] Fresh database detected — applying base init schema...');
-      for (const file of INIT_FILES) {
-        const filePath = path.join(INIT_DIR, file);
-        if (!fs.existsSync(filePath)) {
-          throw new Error(`Missing init file for fresh install: ${filePath}`);
-        }
-        console.log(`[migrate] Applying init/${file}...`);
-        const content = fs.readFileSync(filePath, 'utf8');
-        await sql.unsafe(content);
-        console.log(`[migrate] init/${file} done`);
-      }
-    }
 
     if (!applied.has('0000_upgrade')) {
       if (!fs.existsSync(UPGRADE_FILE)) {
