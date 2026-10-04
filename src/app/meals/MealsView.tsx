@@ -22,6 +22,7 @@ import {
   BookOpen,
   ChevronDown,
   Soup,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoader } from '@/components/ui/spinner';
 import { useMealsViewData } from './useMealsViewData';
+import { GenerateWeekModal } from './GenerateWeekModal';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useAuth } from '@/components/providers';
 import type { Meal } from '@/types';
@@ -68,14 +70,16 @@ export function MealsView() {
     selectedDay, setSelectedDay,
     editingMeal, setEditingMeal,
     goToPreviousWeek, goToNextWeek, goToThisWeek, isCurrentWeek,
+    meals,
     mealsByDay,
     markCooked, unmarkCooked, deleteMeal, addMeal, editMeal, handleDropMeal,
+    applyGeneratedWeek,
     refresh,
     totalMeals, cookedMeals,
     confirmDialogProps,
   } = useMealsViewData();
 
-  const { recipes } = useRecipes({ limit: 100 });
+  const { recipes } = useRecipes({ limit: 200 });
   // Narrowing choice, and a Set — stored as an array because a Set does not
   // survive JSON, and element-validated so a meal type that no longer exists
   // cannot come back as an unselectable filter.
@@ -83,6 +87,7 @@ export function MealsView() {
     'prism-meals-filter-types', [], isMealType,
   );
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const orderedDays = ALL_DAYS.map(
     (_, i) => ALL_DAYS[(weekStartsOn + i) % ALL_DAYS.length]
   ) as readonly Meal['dayOfWeek'][];
@@ -98,6 +103,12 @@ export function MealsView() {
     const user = await requireAuth('Sync meal plan', 'Please log in to sync meals');
     if (!user) return;
     setShowSyncModal(true);
+  };
+
+  const handleGenerateWithAuth = async () => {
+    const user = await requireAuth('Plan weeknights', 'Please log in to generate a meal plan');
+    if (!user) return;
+    setShowGenerateModal(true);
   };
 
   return (
@@ -118,6 +129,10 @@ export function MealsView() {
                 <DropdownMenuItem onClick={() => handleAddWithAuth()}>
                   <Plus className="h-4 w-4 mr-2 text-muted-foreground" />
                   Add meal
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleGenerateWithAuth}>
+                  <Sparkles className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Plan easy weeknights (Mon–Fri)…
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSyncWithAuth}>
                   <Soup className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -211,6 +226,16 @@ export function MealsView() {
         )}
         {showSyncModal && (
           <RecipeSyncModal entity="meals" onClose={() => setShowSyncModal(false)} onSynced={refresh} />
+        )}
+        {showGenerateModal && (
+          <GenerateWeekModal
+            weekOf={weekOfString}
+            orderedDays={orderedDays}
+            recipes={recipes}
+            existingMeals={meals}
+            onClose={() => setShowGenerateModal(false)}
+            onApply={applyGeneratedWeek}
+          />
         )}
       </div>
       <ConfirmDialog {...confirmDialogProps} />

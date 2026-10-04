@@ -155,14 +155,46 @@ export function useMealsViewData() {
   const totalMeals = meals.length;
   const cookedMeals = meals.filter((m) => m.cookedAt).length;
 
+  const applyGeneratedWeek = async (
+    plannedMeals: Array<Record<string, unknown>>,
+    replaceDinnerIds: string[]
+  ) => {
+    const user = await requireAuth("Who's planning this week?");
+    if (!user) throw new Error('Login required to save the meal plan');
+
+    for (const mealId of replaceDinnerIds) {
+      const res = await fetch(`/api/meals/${mealId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        throw new Error('Failed to replace an existing dinner');
+      }
+    }
+
+    for (const meal of plannedMeals) {
+      const response = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...meal, createdBy: user.id }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create a planned meal');
+      }
+    }
+
+    toast({ title: `Added ${plannedMeals.length} weeknight dinners` });
+    await fetchMeals();
+  };
+
   return {
     weekStartsOn, today, currentWeek, weekOfString, loading,
     showAddModal, setShowAddModal,
     selectedDay, setSelectedDay,
     editingMeal, setEditingMeal,
     goToPreviousWeek, goToNextWeek, goToThisWeek, isCurrentWeek,
+    meals,
     mealsByDay,
     markCooked, unmarkCooked, deleteMeal, addMeal, editMeal, handleDropMeal,
+    applyGeneratedWeek,
     refresh: fetchMeals,
     totalMeals, cookedMeals,
     confirmDialogProps,
